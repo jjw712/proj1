@@ -1,38 +1,39 @@
-import { z } from "zod";
+import { ZodType } from 'zod';
 
-async function fetchJson(input: RequestInfo, init?: RequestInit) {
-  const res = await fetch(input, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-    cache: "no-store",
-  });
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+if (!API_BASE) throw new Error('NEXT_PUBLIC_API_BASE is not set');
 
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+function makeUrl(path: string) {
+  return (
+    API_BASE.replace(/\/$/, '') +
+    (path.startsWith('/') ? path : `/${path}`)
+  );
+}
 
+async function parseOrThrow<T>(res: Response, schema: ZodType<T>) {
   if (!res.ok) {
-    const msg = (data && (data.message || data.error)) || `HTTP ${res.status}`;
-    throw new Error(msg);
+    const text = await res.text().catch(() => '');
+    throw new Error(`API ${res.status} ${text}`);
   }
-  return data;
+  const json = await res.json();
+  return schema.parse(json);
 }
 
-export async function apiGet<T>(url: string, schema: z.ZodType<T>): Promise<T> {
-  const data = await fetchJson(url);
-  return schema.parse(data);
+export async function apiGet<T>(path: string, schema: ZodType<T>): Promise<T> {
+  const res = await fetch(makeUrl(path), { cache: 'no-store' });
+  return parseOrThrow(res, schema);
 }
 
-export async function apiPost<TBody, TRes>(
-  url: string,
-  body: TBody,
-  schema: z.ZodType<TRes>,
-): Promise<TRes> {
-  const data = await fetchJson(url, {
-    method: "POST",
+export async function apiPost<T>(
+  path: string,
+  body: unknown,
+  schema: ZodType<T>,
+): Promise<T> {
+  const res = await fetch(makeUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    cache: 'no-store',
   });
-  return schema.parse(data);
+  return parseOrThrow(res, schema);
 }
