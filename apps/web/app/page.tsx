@@ -1,8 +1,12 @@
 export default async function Home() {
-  const res = await fetch('http://localhost:3000/posts', {
+  const res = await fetch('http://localhost:4000/api/posts', {
     cache: 'no-store',
   });
-  const posts = await res.json();
+
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+
+  const json = await res.json();
+  const posts = json.items ?? [];
 
   return (
     <main style={{ padding: 40 }}>
