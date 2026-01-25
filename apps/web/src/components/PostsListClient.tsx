@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPost, apiDelete, apiPatch } from '@/lib/api';
 import type { Post, PostsListResponse } from '@/types/posts';
-import { PostsListResponseSchema } from '@/types/posts';
+import { PostsListResponseSchema, PostSchema } from '@/types/posts';
 
 type Props = {
   initial: PostsListResponse;
@@ -13,17 +13,128 @@ export default function PostsListClient({ initial }: Props) {
   const [items, setItems] = useState<Post[]>(initial.items);
   const [nextCursor, setNextCursor] = useState<number | null>(initial.nextCursor);
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
+
+  const [uiError, setUiError] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+
+  // Create
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  // Edit
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [updating, setUpdating] = useState(false);
+
+  function markDeleting(id: number, on: boolean) {
+    setDeletingIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function isDeleting(id: number) {
+    return deletingIds.has(id);
+  }
+
+  async function createPost() {
+    if (creating) return;
+    if (!title.trim() || !content.trim()) {
+      setUiError('title/content required');
+      return;
+    }
+
+    setCreating(true);
+    setUiError(null);
+
+    try {
+      const newPost = await apiPost(
+        '/api/posts',
+        { title: title.trim(), content: content.trim() },
+        PostSchema,
+      );
+
+      setItems((prev) => [newPost, ...prev]);
+      setTitle('');
+      setContent('');
+    } catch (e) {
+      setUiError(e instanceof Error ? e.message : 'create failed');
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function deletePost(id: number) {
+    if (isDeleting(id)) return;
+    if (!confirm('삭제할거냐?')) return;
+
+    markDeleting(id, true);
+    setUiError(null);
+
+    try {
+      await apiDelete(`/api/posts/${id}`);
+      setItems((prev) => prev.filter((p) => p.id !== id));
+    } catch (e) {
+      setUiError(e instanceof Error ? e.message : 'delete failed');
+    } finally {
+      markDeleting(id, false);
+    }
+  }
+
+  function startEdit(p: Post) {
+    setEditingId(p.id);
+    setEditTitle(p.title);
+    setEditContent(p.content);
+    setUiError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditTitle('');
+    setEditContent('');
+    setUiError(null);
+  }
+
+  async function saveEdit(id: number) {
+    if (updating) return;
+
+    if (!editTitle.trim() || !editContent.trim()) {
+      setUiError('title/content required');
+      return;
+    }
+
+    setUpdating(true);
+    setUiError(null);
+
+    try {
+      const updated = await apiPatch(
+        `/api/posts/${id}`,
+        { title: editTitle.trim(), content: editContent.trim() },
+        PostSchema,
+      );
+
+      setItems((prev) => prev.map((p) => (p.id === id ? updated : p)));
+      cancelEdit();
+    } catch (e) {
+      setUiError(e instanceof Error ? e.message : 'update failed');
+    } finally {
+      setUpdating(false);
+    }
+  }
 
   async function loadMore() {
     if (loading || nextCursor === null) return;
 
     setLoading(true);
-    setErr(null);
+    setUiError(null);
 
     try {
       const data = await apiGet(
-        `/posts?take=20&cursor=${nextCursor}`,
+        `/api/posts?take=20&cursor=${nextCursor}`,
         PostsListResponseSchema,
       );
 
@@ -37,8 +148,8 @@ export default function PostsListClient({ initial }: Props) {
       });
 
       setNextCursor(data.nextCursor);
-    } catch {
-      setErr('load failed');
+    } catch (e) {
+      setUiError(e instanceof Error ? e.message : 'load failed');
     } finally {
       setLoading(false);
     }
@@ -46,15 +157,87 @@ export default function PostsListClient({ initial }: Props) {
 
   return (
     <>
-      <ul>
-        {items.map((p) => (
-          <li key={p.id}>
-            <b>{p.title}</b> - {p.content}
-          </li>
-        ))}
-      </ul>
+      {/* Create Form */}
+      <section style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="title"
+            style={{ flex: 1 }}
+          />
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="content"
+            style={{ flex: 1, minHeight: 80 }}
+          />
+          <button onClick={createPost} disabled={creating} style={{ height: 40 }}>
+            {creating ? 'Creating...' : 'Create'}
+          </button>
+        </div>
+      </section>
 
-      {err && <p style={{ color: 'crimson' }}>{err}</p>}
+      {/* One error place */}
+      {uiError && <p style={{ color: 'crimson' }}>{uiError}</p>}
+
+      {/* List */}
+      <ul>
+        {items.map((p) => {
+          const isEditing = editingId === p.id;
+          const del = isDeleting(p.id);
+
+          return (
+            <li key={p.id} style={{ borderBottom: '1px solid #333', padding: '10px 0' }}>
+              {!isEditing ? (
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <b>{p.title}</b> - {p.content}
+                  </div>
+
+                  <button onClick={() => startEdit(p)} disabled={del || creating || updating}>
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => deletePost(p.id)}
+                    disabled={del || creating || updating}
+                    style={{ opacity: del ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                  >
+                    {del ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      style={{ flex: 1 }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      style={{ flex: 1, minHeight: 70 }}
+                    />
+                    <button onClick={() => saveEdit(p.id)} disabled={updating} style={{ height: 40 }}>
+                      {updating ? 'Saving...' : 'Save'}
+                    </button>
+                    <button onClick={cancelEdit} disabled={updating} style={{ height: 40 }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
 
       {nextCursor !== null ? (
         <button onClick={loadMore} disabled={loading} style={{ marginTop: 16 }}>

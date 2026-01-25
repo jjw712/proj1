@@ -5,9 +5,8 @@ export default async function PostDetailPage({
 }: {
   params: { id: string };
 }) {
-  const res = await fetch(`http://localhost:3001/api/posts/${params.id}`, {
-    cache: "no-store",
-  });
+  const res = await fetch(`/api/posts/${params.id}`, { cache: "no-store" })
+
   const data = await res.json();
   const post = PostSchema.parse(data);
 

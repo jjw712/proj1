@@ -47,7 +47,7 @@ export default function PostsListPage() {
       <ul>
         {items.map((p) => (
           <li key={p.id}>
-            <Link href={`/posts/${p.id}`}>{p.title}</Link>
+            <Link href={`/api/posts/${p.id}`}>{p.title}</Link>
           </li>
         ))}
       </ul>

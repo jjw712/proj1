@@ -3,7 +3,7 @@ import PostsListClient from '@/components/PostsListClient';
 import { PostsListResponseSchema } from '@/types/posts';
 
 export default async function Home() {
-  const first = await apiGet('/posts?take=20', PostsListResponseSchema);
+  const first = await apiGet('/api/posts?take=20', PostsListResponseSchema);
 
   return (
     <main style={{ padding: 40 }}>
