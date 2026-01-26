@@ -8,11 +8,14 @@ import {
   Patch,
   Post,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { ToggleReactionDto } from "./dto/toggle-like.dto";
+
 
 @ApiTags('posts')
 @Controller('posts') // main.ts에서 /api prefix 있으니 /api/posts
@@ -54,6 +57,11 @@ export class PostsController {
   create(@Body() body: CreatePostDto) {
     return this.posts.create(body);
   }
+
+  @Post(':id/reaction')
+toggleReaction(@Param('id') id: string, @Body() dto: ToggleReactionDto) {
+  return this.posts.toggleReaction(this.parseId(id), dto);
+}
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: UpdatePostDto) {
