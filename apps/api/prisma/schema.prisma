@@ -4,12 +4,36 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-
 }
 
 model Post {
-  id        Int      @id @default(autoincrement())
+  id        Int            @id @default(autoincrement())
   title     String
   content   String
-  createdAt DateTime @default(now())
+  createdAt DateTime       @default(now())
+  likeCount    Int     @default(0)
+  dislikeCount Int     @default(0)
+
+  reactions PostReaction[]
 }
+
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
+model PostReaction {
+  id        Int          @id @default(autoincrement())
+  postId    Int
+  userId    String
+  type      ReactionType
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+

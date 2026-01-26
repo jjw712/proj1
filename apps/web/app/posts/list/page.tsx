@@ -6,6 +6,8 @@ import { apiGet } from "@/lib/api";
 import { PostsPageSchema, type Post } from "@/lib/schemas";
 
 export default function PostsListPage() {
+  console.log("PostsListPage rendered");
+  
   const [items, setItems] = useState<Post[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -14,6 +16,8 @@ export default function PostsListPage() {
   async function load(initial = false) {
     setLoading(true);
     setErr(null);
+    
+
     try {
       const qs = new URLSearchParams();
       qs.set("take", "5");

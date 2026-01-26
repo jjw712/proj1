@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { apiGet, apiPost, apiDelete, apiPatch } from '@/lib/api';
 import type { Post, PostsListResponse } from '@/types/posts';
 import { PostsListResponseSchema, PostSchema } from '@/types/posts';
+import LikeDislikeButtons from "./LikeDislikeButtons";
+
 
 type Props = {
   initial: PostsListResponse;
@@ -27,6 +29,9 @@ export default function PostsListClient({ initial }: Props) {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [updating, setUpdating] = useState(false);
+ 
+  console.log("PostsListClient rendered");
+
 
   function markDeleting(id: number, on: boolean) {
     setDeletingIds((prev) => {
@@ -70,7 +75,7 @@ export default function PostsListClient({ initial }: Props) {
 
   async function deletePost(id: number) {
     if (isDeleting(id)) return;
-    if (!confirm('삭제할거냐?')) return;
+    if (!confirm('삭제?')) return;
 
     markDeleting(id, true);
     setUiError(null);
@@ -196,6 +201,8 @@ export default function PostsListClient({ initial }: Props) {
                   <div style={{ flex: 1 }}>
                     <b>{p.title}</b> - {p.content}
                   </div>
+                  <LikeDislikeButtons postId={p.id} initialLike={p.likeCount} initialDislike={p.dislikeCount} />
+
 
                   <button onClick={() => startEdit(p)} disabled={del || creating || updating}>
                     Edit

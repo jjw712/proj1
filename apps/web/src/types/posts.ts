@@ -5,6 +5,8 @@ export const PostSchema = z.object({
   title: z.string(),
   content: z.string(),
   createdAt: z.string(),
+  likeCount: z.number(),
+  dislikeCount: z.number(),
 });
 
 export const PostsListResponseSchema = z.object({
