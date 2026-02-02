@@ -7,19 +7,15 @@ datasource db {
 }
 
 model Post {
-  id        Int            @id @default(autoincrement())
-  title     String
-  content   String
-  createdAt DateTime       @default(now())
-  likeCount    Int     @default(0)
-  dislikeCount Int     @default(0)
-
-  reactions PostReaction[]
-}
-
-enum ReactionType {
-  LIKE
-  DISLIKE
+  id           Int            @id @default(autoincrement())
+  title        String
+  content      String
+  createdAt    DateTime       @default(now())
+  dislikeCount Int            @default(0)
+  likeCount    Int            @default(0)
+  authorKey    String         @default("guest_bootstrap")
+  authorRole   Role           @default(GUEST)
+  reactions    PostReaction[]
 }
 
 model PostReaction {
@@ -29,7 +25,6 @@ model PostReaction {
   type      ReactionType
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
-
   post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([postId, userId])
@@ -37,3 +32,13 @@ model PostReaction {
   @@index([userId])
 }
 
+enum ReactionType {
+  LIKE
+  DISLIKE
+}
+
+enum Role {
+  GUEST
+  USER
+  ADMIN
+}

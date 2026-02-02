@@ -42,11 +42,19 @@ export class PostsService {
     return post;
   }
 
-  create(dto: CreatePostDto) {
-    return this.prisma.client.post.create({
-      data: { title: dto.title, content: dto.content },
-    });
-  }
+  create(
+  dto: CreatePostDto,
+  user: { id: string; role: 'GUEST' | 'USER' | 'ADMIN' },
+) {
+  return this.prisma.client.post.create({
+    data: {
+      title: dto.title,
+      content: dto.content,
+      authorKey: user.id,
+      authorRole: user.role,
+    },
+  });
+}
 
   async update(id: number, dto: UpdatePostDto) {
     await this.get(id); // 없으면 404

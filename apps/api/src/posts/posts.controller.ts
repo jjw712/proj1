@@ -8,6 +8,8 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
@@ -15,12 +17,15 @@ import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ToggleReactionDto } from "./dto/toggle-like.dto";
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
 
 
 @ApiTags('posts')
 @Controller('posts') // main.ts에서 /api prefix 있으니 /api/posts
 export class PostsController {
-  constructor(private readonly posts: PostsService) {}
+  constructor(private readonly posts: PostsService, 
+    private readonly postsService: PostsService) {}
 
   private parseId(id: string): number {
     const n = Number(id);
@@ -53,10 +58,12 @@ export class PostsController {
     return this.posts.get(this.parseId(id));
   }
 
-  @Post()
-  create(@Body() body: CreatePostDto) {
-    return this.posts.create(body);
-  }
+  @UseGuards(JwtAuthGuard) // 게스트/유저 전부 토큰 필요
+@Post()
+create(@Req() req, @Body() dto: CreatePostDto) {
+  return this.postsService.create(dto, req.user);
+}
+
 
   @Post(':id/reaction')
 toggleReaction(@Param('id') id: string, @Body() dto: ToggleReactionDto) {
