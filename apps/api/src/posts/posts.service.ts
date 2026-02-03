@@ -1,8 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ToggleReactionDto } from "./dto/toggle-like.dto";
+
 
 @Injectable()
 export class PostsService {
@@ -56,22 +57,39 @@ export class PostsService {
   });
 }
 
-  async update(id: number, dto: UpdatePostDto) {
-    await this.get(id); // 없으면 404
-    return this.prisma.client.post.update({
-      where: { id },
-      data: {
-        ...(dto.title !== undefined ? { title: dto.title } : {}),
-        ...(dto.content !== undefined ? { content: dto.content } : {}),
-      },
-    });
+  async update(
+  id: number,
+  dto: UpdatePostDto,
+  user: { id: string; role: string }
+) {
+  const post = await this.prisma.client.post.findUnique({ where: { id } });
+  if (!post) throw new NotFoundException('post not found');
+
+  if (post.authorKey !== user.id) {
+    throw new ForbiddenException('본인 글만 수정 가능');
   }
 
-  async remove(id: number) {
-    await this.get(id); // 없으면 404
-    await this.prisma.client.post.delete({ where: { id } });
-    return { ok: true };
+  return this.prisma.client.post.update({
+    where: { id },
+    data: {
+      ...(dto.title !== undefined ? { title: dto.title } : {}),
+      ...(dto.content !== undefined ? { content: dto.content } : {}),
+    },
+  });
+}
+
+  async remove(id: number, user: { id: string; role: string }) {
+  const post = await this.prisma.client.post.findUnique({ where: { id } });
+  if (!post) throw new NotFoundException('post not found');
+
+  if (post.authorKey !== user.id) {
+    throw new ForbiddenException('본인 글만 삭제 가능');
   }
+
+  await this.prisma.client.post.delete({ where: { id } });
+  return { ok: true };
+}
+
 
   
 
