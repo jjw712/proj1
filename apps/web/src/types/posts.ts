@@ -16,3 +16,4 @@ export const PostsListResponseSchema = z.object({
 
 export type Post = z.infer<typeof PostSchema>;
 export type PostsListResponse = z.infer<typeof PostsListResponseSchema>;
+

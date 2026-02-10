@@ -4,20 +4,26 @@ const API_BASE = process.env.API_BASE;
 if (!API_BASE) throw new Error("API_BASE is not set");
 
 function upstreamPostsUrl(req: Request) {
-  // req.url이 상대경로로 들어와도 안전하게 처리
   const u = new URL(req.url, "http://localhost");
-
-  // 항상 API 서버의 /posts 로 보냄
   const upstream = new URL("/api/posts", API_BASE);
-  upstream.search = u.search; // ?take=20 같은 쿼리 그대로 전달
+  upstream.search = u.search;
   return upstream.toString();
+}
+
+function pickAuth(req: Request) {
+  // 브라우저에서 보내는 "Authorization"은 여기서 소문자 key로 읽힘
+  return req.headers.get("authorization") ?? "";
 }
 
 export async function GET(req: Request) {
   const upstream = upstreamPostsUrl(req);
+  const auth = pickAuth(req);
 
   const res = await fetch(upstream, {
-    headers: { Accept: "application/json" },
+    headers: {
+      Accept: "application/json",
+      ...(auth ? { authorization: auth } : {}),
+    },
     cache: "no-store",
   });
 
@@ -29,12 +35,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const upstream = new URL("/api/posts", API_BASE).toString();
+  const auth = pickAuth(req);
 
   const res = await fetch(upstream, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(auth ? { authorization: auth } : {}),
     },
     body: await req.text(),
     cache: "no-store",

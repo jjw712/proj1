@@ -4,14 +4,22 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiGet } from "@/lib/api";
 import { PostsPageSchema, type Post } from "@/lib/schemas";
+import { useRouter } from "next/navigation";
+
 
 export default function PostsListPage() {
-  console.log("PostsListPage rendered");
+  const router = useRouter();
   
   const [items, setItems] = useState<Post[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    const meKey = localStorage.getItem("meKey");
+    if (!token || !meKey) router.replace("/");
+  }, [router]);
 
   async function load(initial = false) {
     setLoading(true);
@@ -20,7 +28,7 @@ export default function PostsListPage() {
 
     try {
       const qs = new URLSearchParams();
-      qs.set("take", "5");
+      qs.set("take", "25");
       if (!initial && nextCursor) qs.set("cursor", String(nextCursor));
 
       const data = await apiGet(`/api/posts?${qs.toString()}`, PostsPageSchema);
@@ -51,7 +59,7 @@ export default function PostsListPage() {
       <ul>
         {items.map((p) => (
           <li key={p.id}>
-            <Link href={`/api/posts/${p.id}`}>{p.title}</Link>
+            <Link href={`/posts/${p.id}`}>{p.title}</Link>
           </li>
         ))}
       </ul>

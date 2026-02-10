@@ -1,23 +1,39 @@
 'use client';
 
-import { useState } from 'react';
 import { apiGet, apiPost, apiDelete, apiPatch } from '@/lib/api';
-import type { Post, PostsListResponse } from '@/types/posts';
-import { PostsListResponseSchema, PostSchema } from '@/types/posts';
+import type { Post } from "@/lib/schemas";
+import { PostsPageSchema, PostSchema } from "@/lib/schemas";
 import LikeDislikeButtons from "./LikeDislikeButtons";
+import { useEffect, useState } from "react";
 
 
-type Props = {
-  initial: PostsListResponse;
-};
+import type { PostsPage } from "@/lib/schemas";
+
+type Props = { initial: PostsPage };
+
+
 
 export default function PostsListClient({ initial }: Props) {
+  const [meKey, setMeKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    const read = () => setMeKey(localStorage.getItem("meKey"));
+    read();
+    const t = setTimeout(read, 300);
+    return () => clearTimeout(t);
+  }, []);
+
   const [items, setItems] = useState<Post[]>(initial.items);
   const [nextCursor, setNextCursor] = useState<number | null>(initial.nextCursor);
   const [loading, setLoading] = useState(false);
 
   const [uiError, setUiError] = useState<string | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+  
+
+ 
+  
+
 
   // Create
   const [title, setTitle] = useState('');
@@ -31,6 +47,7 @@ export default function PostsListClient({ initial }: Props) {
   const [updating, setUpdating] = useState(false);
  
   console.log("PostsListClient rendered");
+  
 
 
   function markDeleting(id: number, on: boolean) {
@@ -140,7 +157,7 @@ export default function PostsListClient({ initial }: Props) {
     try {
       const data = await apiGet(
         `/api/posts?take=20&cursor=${nextCursor}`,
-        PostsListResponseSchema,
+        PostsPageSchema,
       );
 
       setItems((prev) => {
@@ -191,8 +208,11 @@ export default function PostsListClient({ initial }: Props) {
       {/* List */}
       <ul>
         {items.map((p) => {
+          console.log("meKey=", meKey, "authorKey=", p.authorKey);
+
           const isEditing = editingId === p.id;
           const del = isDeleting(p.id);
+          const canEdit = !!meKey && p.authorKey === meKey; 
 
           return (
             <li key={p.id} style={{ borderBottom: '1px solid #333', padding: '10px 0' }}>
@@ -201,10 +221,16 @@ export default function PostsListClient({ initial }: Props) {
                   <div style={{ flex: 1 }}>
                     <b>{p.title}</b> - {p.content}
                   </div>
-                  <LikeDislikeButtons postId={p.id} initialLike={p.likeCount} initialDislike={p.dislikeCount} />
+                  <LikeDislikeButtons postId={p.id} 
+                  initialLike={p.likeCount} 
+                  initialDislike={p.dislikeCount} 
+                  />
 
-
-                  <button onClick={() => startEdit(p)} disabled={del || creating || updating}>
+ {canEdit && (
+  <>
+                  <button 
+                  onClick={() => startEdit(p)} 
+                  disabled={del || creating || updating}>
                     Edit
                   </button>
 
@@ -215,6 +241,8 @@ export default function PostsListClient({ initial }: Props) {
                   >
                     {del ? 'Deleting...' : 'Delete'}
                   </button>
+                  </>
+ )}
                 </div>
               ) : (
                 <div>
@@ -232,12 +260,16 @@ export default function PostsListClient({ initial }: Props) {
                       onChange={(e) => setEditContent(e.target.value)}
                       style={{ flex: 1, minHeight: 70 }}
                     />
+                    {canEdit && (
+  <>
                     <button onClick={() => saveEdit(p.id)} disabled={updating} style={{ height: 40 }}>
                       {updating ? 'Saving...' : 'Save'}
                     </button>
                     <button onClick={cancelEdit} disabled={updating} style={{ height: 40 }}>
                       Cancel
                     </button>
+                     </>
+ )}
                   </div>
                 </div>
               )}
