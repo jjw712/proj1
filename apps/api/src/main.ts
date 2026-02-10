@@ -6,6 +6,8 @@ import { env } from './env';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  console.log('DATABASE_URL loaded?', !!process.env.DATABASE_URL);
+
 
   // API prefix 추천 (확장할거면 고정해두는 게 이득)
   app.setGlobalPrefix('api');

@@ -14,9 +14,15 @@ export class PostsService {
     take,
     ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     orderBy: { id: "desc" },
-    select: { id: true, title: true, content: true, createdAt: true },
-  });
-
+    select: {
+    id: true,
+    title: true,
+    content: true,
+    createdAt: true,
+    authorKey: true,
+    authorRole: true,
+  },
+});
   const ids = posts.map(p => p.id);
   if (ids.length === 0) return posts.map(p => ({ ...p, likeCount: 0, dislikeCount: 0 }));
 
